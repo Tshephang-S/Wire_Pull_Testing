@@ -1,3 +1,5 @@
+#NB: Parts of this code were contributed by project team member Nollan Verges.
+
 # Import
 from statsmodels.stats.power import TTestIndPower
 import pandas as pd
