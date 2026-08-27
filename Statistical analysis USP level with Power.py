@@ -12,9 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import statsmodels.stats.multitest as smm
 
-
-# definition of df per USP level
-
+#load pull test data files
 df_USP_150 = pd.read_excel("USP_150_cal.xlsx", dtype={'Date': str})
 df_USP_220 = pd.read_excel("USP_220_cal.xlsx", dtype={'Date': str})
 df_USP_240 = pd.read_excel("USP_240_cal.xlsx", dtype={'Date': str})
@@ -24,30 +22,27 @@ df_USP_300 = pd.read_excel("USP_300_cal.xlsx", dtype={'Date': str})
 df_USP_320 = pd.read_excel("USP_320_cal.xlsx", dtype={'Date': str})
 print("Load all excel files succesfully")
 
-# visualisation of data
 df_USP = [df_USP_150, df_USP_220, df_USP_240, df_USP_260,
           df_USP_280, df_USP_300, df_USP_320]
 labels = ["USP 150", "USP 220", "USP 240",
           "USP 260", "USP 280", "USP 300", "USP 320"]
 
 
-# Per USP levels repartition of types of failure mode
+# Split of failure modes per USP 
 for i, df in enumerate(df_USP):
     label = labels[i]
-    unique_failure_methods = df["Failure Mode"].value_counts()
+    unique_failure_methods = df["Failure Mode"].value_counts()  #counts occurance of each failure mode
     fig, ax = plt.subplots(figsize=(6, 4))
     unique_failure_methods.plot(kind='bar', ax=ax)
     ax.set_xlabel('Failure methods')
     ax.set_ylabel('Count')
     ax.set_title(label)
     plt.tight_layout()
-    plt.savefig(f"./Res/{label}_repartition_of_failure_methods.png")
+    plt.savefig(f"./Res/{label}_split_of_USP.png")
     plt.close()
 
-print("Repartition of failure methods saved in Res folder")
-
-# boxplot
-df_USP_peak_force = [df["Peak Force - Cal (gf)"] for df in df_USP]
+# boxplot of spread of peak force across ultrasonic power levels
+df_USP_peak_force = [df["Peak Force - Cal (gf)"] for df in df_USP] #use the calibrated data
 fig, ax = plt.subplots()
 ax.set_ylabel('Peak force (gf)')
 # correct parameter is "labels"
@@ -62,8 +57,7 @@ print("Boxplot of comparison of Peak force by USP_level saved in Res folder")
 for i, df in enumerate(df_USP_peak_force):
     print(f"{labels[i]} - Mean: {df.mean():.4f}, Std: {df.std(ddof=1):.4f}")
 
-# Is there a difference between USP level?
-# Test of normality
+#Shapiro normality test
 normality_flags = []
 for i, df in enumerate(df_USP_peak_force):
     stat, p_val = stats.shapiro(df)
@@ -112,10 +106,10 @@ print(f"\n--- Test executed : {test} | p-value = {pval:.4e} ---")
 
 if pval < 0.05:
     print(" -> At least one level is different from others. Proceeding to Post-Hoc analysis...\n")
-
+          # pairwise comparison of USP levels
     # Option A : Welch-ANOVA (Games-Howell)
     if test == "Welch-ANOVA":
-        print("=== Post-Hoc Analysis: Games-Howell ===")
+        print("Post-Hoc Analysis: Games-Howell")
         posthoc = pg.pairwise_gameshowell(
             dv='Peak_Force', between='USP_Level', data=df_all)
         # print(posthoc[['A', 'B', 'pval', 'pval_corr', 'sig']])
@@ -124,7 +118,7 @@ if pval < 0.05:
     # Option B : ANOVA or Kruskal-Wallis (Pairwise t-test / Mann-Whitney + Holm)
     else:
         print(
-            f"=== Post-Hoc Analysis: Pairwise Tests with Holm Correction ({'t-test' if all_normal else 'Mann-Whitney'}) ===")
+            f"Post-Hoc Analysis: Pairwise Tests with Holm Correction ({'t-test' if all_normal else 'Mann-Whitney'}) ===")
         p_values = []
         comparisons = list(combinations(
             sorted(df_all['USP_Level'].unique()), 2))
@@ -206,9 +200,6 @@ if pval < 0.05:
 
     if not all_normal:
         print(
-            "\nNote: peak force did not meet the Shapiro-Wilk normality assumption "
-            "for at least one USP level, so the t-test-based power calculation above "
-            "is an approximation."
-        )
+            "\nNote: Data not normally distributed therefore power analysis is an approximation")
 else:
     print(" No significant difference between USP levels; power analysis skipped.")
